@@ -1,0 +1,16 @@
+web:
+  image: akka-http-web
+  ports:
+    - 8080:8080
+  links:
+    - db
+
+db:
+  image: akka-http-db
+
+myadmin:
+  image: phpmyadmin/phpmyadmin
+  ports:
+    - 18080:8080
+  links:
+    - db

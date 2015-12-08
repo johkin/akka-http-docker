@@ -1,0 +1,91 @@
+plugins {
+    id 'java'
+    id 'application'
+
+    id "de.gesellix.docker" version "2015-11-04T21-33-37"
+}
+
+mainClassName = "se.acrend.akkahttp.AkkaHttpServer"
+
+import de.gesellix.gradle.docker.tasks.*
+import jdk.nashorn.internal.runtime.arrays.IntOrLongElements
+
+import java.util.logging.Filter
+
+repositories {
+    mavenCentral()
+
+    maven {
+        url "http://repo.akka.io/snapshots/"
+    }
+}
+
+dependencies {
+    compile group: 'com.typesafe.akka', name: 'akka-http-experimental_2.11', version: '2.0-M1'
+    compile group: 'com.typesafe.akka', name: 'akka-stream-experimental_2.11', version: '2.0-M1'
+    compile group: 'com.typesafe.akka', name: 'akka-http-jackson-experimental_2.11', version: '2.0-M1'
+    compile 'org.flywaydb:flyway-core:3.2.1'
+    compile 'mysql:mysql-connector-java:5.1.38'
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+docker {
+    dockerHost = "${System.env.DOCKER_HOST}".replace("tcp", "http")
+}
+
+compileJava {
+    sourceCompatibility = '1.8'
+}
+
+
+task rmImage(type: DockerRmiTask) {
+    imageId = "akka-http-web"
+}
+
+task prepareDockerFiles(dependsOn: build) << {
+    def dockerDir = new File(buildDir, 'docker')
+    def distZip = new File(buildDir, "distributions/${project.name}-${project.version}.zip")
+
+    mkdir dockerDir
+
+    copy {
+        from fileTree('src/main/docker')
+        into dockerDir
+        expand(project: project)
+    }
+    copy {
+        from zipTree(distZip)
+        into dockerDir
+    }
+}
+
+task buildImage(type: DockerBuildTask, dependsOn: prepareDockerFiles) {
+    def dockerDir = new File(buildDir, 'docker')
+    imageName = "akka-http-web"
+    buildContextDirectory = dockerDir
+}
+
+task stopContainer(type: DockerStopTask) {
+    containerId = "akka-http-web"
+}
+
+task rmContainer(type: DockerRmTask) {
+    dependsOn stopContainer
+    containerId = "akka-http-web"
+}
+
+task runContainer(type: DockerRunTask) {
+    dependsOn buildImage
+    imageName = "akka-http-web"
+    containerName = "akka-http-web"
+}
+
+task startContainer(type: DockerContainerTask) {
+    targetState = DockerContainerTask.State.STARTED
+    containerName = "akka-http-web"
+}
+
+task functionalTestMyApp(type: Test) << {
+    dependsOn startContainer
+    finalizedBy stopContainer
+}

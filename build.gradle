@@ -1,0 +1,14 @@
+plugins {
+    id 'com.gradle.build-receipt' version '1.0'
+}
+
+buildReceiptLicense {
+    agreementUrl = 'https://gradle.com/terms-of-service'
+    agree = 'yes'
+}
+
+allprojects {
+    group 'se.acrend'
+
+    version '1.0-SNAPSHOT'
+}

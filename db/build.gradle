@@ -1,0 +1,60 @@
+plugins {
+    id 'base'
+
+    id "de.gesellix.docker" version "2015-11-04T21-33-37"
+}
+
+docker {
+    dockerHost = "${System.env.DOCKER_HOST}".replace("tcp", "http")
+}
+
+import de.gesellix.gradle.docker.tasks.*
+
+task rmImage(type: DockerRmiTask) {
+    dockerHost = docker.dockerHost
+    imageId = "akka-http-db"
+}
+
+task prepareDockerFiles(dependsOn: build) << {
+    def dockerDir = new File(buildDir, 'docker')
+
+    mkdir dockerDir
+
+    copy {
+        from fileTree('src/main/docker')
+        into dockerDir
+        expand(project: project)
+    }
+}
+
+task buildImage(type: DockerBuildTask) {
+    dependsOn prepareDockerFiles
+    imageName = "akka-http-db"
+    def dockerDir = new File(buildDir, 'docker')
+    buildContextDirectory = dockerDir
+}
+
+task stopContainer(type: DockerStopTask) {
+    containerId = "akka-http-db"
+}
+
+task rmContainer(type: DockerRmTask) {
+    dependsOn stopContainer
+    containerId = "akka-http-db"
+}
+
+task runContainer(type: DockerRunTask) {
+    dependsOn buildImage
+    imageName = "akka-http-db"
+    containerName = "akka-http-db"
+}
+
+task startContainer(type: DockerContainerTask) {
+    targetState = DockerContainerTask.State.STARTED
+    containerName = "akka-http-db"
+}
+
+task functionalTestMyApp(type: Test) << {
+    dependsOn startContainer
+    finalizedBy stopContainer
+}
