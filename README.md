@@ -1,6 +1,6 @@
 # Akka-http Docker Prototyping Lab
 This repository contains various investigations about how to use akka-http, 
-actors, database in a Docker environment. FLyway is used to migrate the 
+actors, database in a Docker environment. Flyway is used to migrate the 
 database in runtime.
 ## Setup
 
